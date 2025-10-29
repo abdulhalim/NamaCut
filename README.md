@@ -21,7 +21,7 @@ It allows you to easily cut, preview, and convert videos using FFmpeg and GStrea
 ##  How to Use
 
 ### 1 Install (Debian/Ubuntu)
-Download the `.deb` package from the [Releases](https://github.com/Pourdaryaei/NamaCut/releases) page and install:
+Download the `.deb` package from the [Releases]([https://github.com/Pourdaryaei/NamaCut/releases](https://github.com/abdulhalim/NamaCut/releases) page and install:
 
 ```bash
 sudo dpkg -i namacut_1.0_all.deb
