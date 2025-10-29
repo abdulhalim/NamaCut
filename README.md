@@ -3,6 +3,10 @@
 **NamaCut** is a simple video trimming and conversion tool built with Python and GTK.  
 It allows you to easily cut, preview, and convert videos using FFmpeg and GStreamer.
 
+## 📷 Screenshot
+
+![NamaCut Screenshot](https://raw.githubusercontent.com/abdulhalim/NamaCut/refs/heads/main/screenshot.png)
+
 ---
 
 ## ✨ Features
