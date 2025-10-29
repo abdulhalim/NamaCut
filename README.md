@@ -1,27 +1,27 @@
-# 🎬 NamaCut
+#  NamaCut
 
 **NamaCut** is a simple video trimming and conversion tool built with Python and GTK.  
 It allows you to easily cut, preview, and convert videos using FFmpeg and GStreamer.
 
-## 📷 Screenshot
+##  Screenshot
 
 ![NamaCut Screenshot](https://raw.githubusercontent.com/abdulhalim/NamaCut/refs/heads/main/screenshot.png)
 
 ---
 
-## ✨ Features
-- Simple GTK interface 🪄  
+##  Features
+- Simple GTK interface   
 - Trim and convert videos (MP4, MKV, WebM, MP3, AAC)  
 - Real-time progress tracking  
 - Built with Python 3 and GStreamer  
-- Lightweight and fast ⚡
+- Lightweight and fast 
 
 ---
 
-## 💻 How to Use
+##  How to Use
 
-### 1️⃣ Install (Debian/Ubuntu)
-Download the `.deb` package from the [Releases](https://github.com/Pourdaryaei/namacut/releases) page and install:
+### 1 Install (Debian/Ubuntu)
+Download the `.deb` package from the [Releases](https://github.com/Pourdaryaei/NamaCut/releases) page and install:
 
 ```bash
 sudo dpkg -i namacut_1.0_all.deb
@@ -33,7 +33,7 @@ Then run:
 namacut
 ```
 
-### 2️⃣ Run from Source
+### 2 Run from Source
 If you prefer to run directly from source:
 ```bash
 python3 NamaCut.py
@@ -41,7 +41,7 @@ python3 NamaCut.py
 
 ---
 
-## 🧩 Requirements
+##  Requirements
 - Python 3  
 - GTK 3 (PyGObject)  
 - FFmpeg  
@@ -49,12 +49,12 @@ python3 NamaCut.py
 
 ---
 
-## 🪪 License
+##  License
 Licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
 
 ---
 
-## 👤 Author
+##  Author
 **Pourdaryaei**  
-🌐 [www.pourdaryaei.ir](https://www.pourdaryaei.ir)  
-📧 Pourdaryaei@yandex.com
+ [www.pourdaryaei.ir](https://www.pourdaryaei.ir)  
+ Pourdaryaei@yandex.com
