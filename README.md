@@ -5,7 +5,7 @@ It allows you to easily cut, preview, and convert videos using FFmpeg and GStrea
 
 ##  Screenshot
 
-![NamaCut Screenshot](https://raw.githubusercontent.com/abdulhalim/NamaCut/refs/heads/main/screenshot.png)
+![NamaCut Screenshot](https://raw.githubusercontent.com/abdulhalim/NamaCut/refs/heads/main/Screenshot_NC.png)
 
 ---
 
