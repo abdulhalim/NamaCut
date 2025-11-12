@@ -37,16 +37,20 @@ def is_video_file(file_path):
         return file_type == "video"
     return False
 
-def seconds_to_hms(s):
-    s = int(round(s))
-    return s // 3600, (s % 3600) // 60, s % 60
+def seconds_to_hmsms(s):
+    s = float(s)
+    hours = int(s // 3600)
+    minutes = int((s % 3600) // 60)
+    seconds = int(s % 60)
+    milliseconds = int((s - int(s)) * 1000)
+    return hours, minutes, seconds, milliseconds
 
-def hms_str(s):
-    h, m, sec = seconds_to_hms(s)
-    return f"{h:02d}:{m:02d}:{sec:02d}"
+def hmsms_str(s):
+    h, m, sec, ms = seconds_to_hmsms(s)
+    return f"{h:02d}:{m:02d}:{sec:02d}.{ms:03d}"
 
-def hms_to_seconds(h, m, s):
-    return int(h)*3600 + int(m)*60 + int(s)
+def hmsms_to_seconds(h, m, s, ms):
+    return int(h)*3600 + int(m)*60 + int(s) + float(ms)/1000
 
 def get_output_directory(format_type):
     home_dir = os.path.expanduser("~")
@@ -71,8 +75,185 @@ def unique_output_path(base_name, extension, format_type):
         i += 1
 
 
+class SettingsDialog(Gtk.Dialog):
+    def __init__(self, parent, current_settings):
+        super().__init__(title="Export Settings", transient_for=parent, flags=0)
+        self.set_default_size(450, 500)
+        
+        # ذخیره تنظیمات فعلی
+        self.settings = current_settings.copy()
+        
+        # ایجاد رابط کاربری
+        box = self.get_content_area()
+        box.set_spacing(10)
+        box.set_border_width(10)
+        
+        # بخش فرمت
+        format_frame = Gtk.Frame(label="Output Format")
+        format_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        format_frame.add(format_box)
+        
+        # انتخاب فرمت
+        format_label = Gtk.Label(label="Format:")
+        format_box.pack_start(format_label, False, False, 0)
+        
+        self.format_combo = Gtk.ComboBoxText()
+        formats = [
+            ("MP4", "mp4"), ("MKV", "mkv"), ("WEBM", "webm"),
+            ("AVI", "avi"), ("MOV", "mov"), ("WMV", "wmv"),
+            ("MP3", "mp3"), ("AAC", "aac"), ("WAV", "wav"),
+            ("Original (copy)", "original")
+        ]
+        for label, tag in formats:
+            self.format_combo.append_text(label)
+            if tag == current_settings.get("format", "mp4"):
+                self.format_combo.set_active(formats.index((label, tag)))
+        format_box.pack_start(self.format_combo, False, False, 0)
+        
+        # کیفیت
+        quality_label = Gtk.Label(label="Quality:")
+        format_box.pack_start(quality_label, False, False, 0)
+        
+        self.quality_combo = Gtk.ComboBoxText()
+        format_box.pack_start(self.quality_combo, False, False, 0)
+        
+        # بیت ریت
+        bitrate_label = Gtk.Label(label="Audio Bitrate (kbps):")
+        format_box.pack_start(bitrate_label, False, False, 0)
+        
+        self.bitrate_spin = Gtk.SpinButton.new_with_range(64, 320, 32)
+        self.bitrate_spin.set_value(current_settings.get("bitrate", 192))
+        format_box.pack_start(self.bitrate_spin, False, False, 0)
+        
+        box.pack_start(format_frame, False, False, 0)
+        
+        # بخش تنظیمات پخش
+        playback_frame = Gtk.Frame(label="Playback Settings")
+        playback_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        playback_frame.add(playback_box)
+        
+        # تنظیمات seek
+        seek_label = Gtk.Label(label="Seek Step (seconds):")
+        playback_box.pack_start(seek_label, False, False, 0)
+        
+        self.seek_step = Gtk.SpinButton.new_with_range(0.1, 10, 0.1)
+        self.seek_step.set_value(current_settings.get("seek_step", 1.0))
+        self.seek_step.set_digits(1)
+        playback_box.pack_start(self.seek_step, False, False, 0)
+        
+        # تنظیمات fine seek
+        fine_seek_label = Gtk.Label(label="Fine Seek Step (seconds):")
+        playback_box.pack_start(fine_seek_label, False, False, 0)
+        
+        self.fine_seek_step = Gtk.SpinButton.new_with_range(0.01, 1, 0.01)
+        self.fine_seek_step.set_value(current_settings.get("fine_seek_step", 0.1))
+        self.fine_seek_step.set_digits(2)
+        playback_box.pack_start(self.fine_seek_step, False, False, 0)
+        
+        box.pack_start(playback_frame, False, False, 0)
+        
+        # بخش action بعد از پردازش
+        action_frame = Gtk.Frame(label="After Export")
+        action_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        action_frame.add(action_box)
+        
+        action_label = Gtk.Label(label="After processing:")
+        action_box.pack_start(action_label, False, False, 0)
+        
+        self.action_combo = Gtk.ComboBoxText()
+        self.action_combo.append_text("No action")
+        self.action_combo.append_text("Close App")
+        self.action_combo.append_text("Open Output Folder")
+        self.action_combo.set_active(current_settings.get("action", 0))
+        action_box.pack_start(self.action_combo, False, False, 0)
+        
+        box.pack_start(action_frame, False, False, 0)
+        
+        # دکمه‌ها
+        button_box = Gtk.Box(spacing=6)
+        save_btn = Gtk.Button(label="Save Settings")
+        cancel_btn = Gtk.Button(label="Cancel")
+        
+        save_btn.connect("clicked", self.on_save)
+        cancel_btn.connect("clicked", self.on_cancel)
+        
+        button_box.pack_end(save_btn, False, False, 0)
+        button_box.pack_end(cancel_btn, False, False, 0)
+        
+        box.pack_start(button_box, False, False, 0)
+        
+        # بروزرسانی اولیه کیفیت‌ها
+        self.on_format_changed()
+        self.format_combo.connect("changed", self.on_format_changed)
+        
+        self.show_all()
+    
+    def on_format_changed(self, widget=None):
+        format_index = self.format_combo.get_active()
+        format_tags = ["mp4", "mkv", "webm", "avi", "mov", "wmv", "mp3", "aac", "wav", "original"]
+        
+        if format_index >= 0 and format_index < len(format_tags):
+            format_tag = format_tags[format_index]
+            self.quality_combo.remove_all()
+            
+            if format_tag in ["mp4", "mkv", "webm", "avi", "mov", "wmv"]:
+                self.quality_combo.append_text("4K")
+                self.quality_combo.append_text("2K")
+                self.quality_combo.append_text("1080p")
+                self.quality_combo.append_text("720p")
+                self.quality_combo.append_text("480p")
+                self.quality_combo.append_text("Original")
+                self.quality_combo.set_active(2)  # 1080p as default
+                self.bitrate_spin.set_sensitive(True)
+            elif format_tag in ["mp3", "aac"]:
+                if format_tag == "mp3":
+                    self.quality_combo.append_text("320 kbps")
+                    self.quality_combo.append_text("256 kbps")
+                    self.quality_combo.append_text("192 kbps")
+                    self.quality_combo.append_text("128 kbps")
+                else:  # aac
+                    self.quality_combo.append_text("256 kbps")
+                    self.quality_combo.append_text("192 kbps")
+                    self.quality_combo.append_text("128 kbps")
+                    self.quality_combo.append_text("96 kbps")
+                self.quality_combo.set_active(1)
+                self.bitrate_spin.set_sensitive(True)
+            elif format_tag == "wav":
+                self.quality_combo.append_text("24-bit HD")
+                self.quality_combo.append_text("16-bit CD")
+                self.quality_combo.append_text("8-bit")
+                self.quality_combo.set_active(1)
+                self.bitrate_spin.set_sensitive(False)
+            else:  # original
+                self.quality_combo.append_text("Same as source")
+                self.quality_combo.set_active(0)
+                self.bitrate_spin.set_sensitive(False)
+    
+    def on_save(self, widget):
+        # ذخیره تنظیمات
+        format_tags = ["mp4", "mkv", "webm", "avi", "mov", "wmv", "mp3", "aac", "wav", "original"]
+        format_index = self.format_combo.get_active()
+        
+        if 0 <= format_index < len(format_tags):
+            self.settings.update({
+                "format": format_tags[format_index],
+                "quality": self.quality_combo.get_active_text(),
+                "bitrate": self.bitrate_spin.get_value(),
+                "seek_step": self.seek_step.get_value(),
+                "fine_seek_step": self.fine_seek_step.get_value(),
+                "action": self.action_combo.get_active()
+            })
+        self.response(Gtk.ResponseType.OK)
+    
+    def on_cancel(self, widget):
+        self.response(Gtk.ResponseType.CANCEL)
+    
+    def get_settings(self):
+        return self.settings
+
+
 class EmbeddedPlayer(Gtk.Box):
-    def __init__(self):
+    def __init__(self, settings_callback):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.playbin = Gst.ElementFactory.make("playbin", "player")
         self.duration = None
@@ -83,6 +264,7 @@ class EmbeddedPlayer(Gtk.Box):
         self.flip_horizontal = False
         self.flip_vertical = False
         self.file_type = None  # 'audio' or 'video'
+        self.settings_callback = settings_callback
         
         # Crop-related variables
         self.crop_mode = False
@@ -105,7 +287,7 @@ class EmbeddedPlayer(Gtk.Box):
         
         # Create main container for video
         self.video_container = Gtk.Box()
-        self.video_container.set_size_request(800, 450)
+        self.video_container.set_size_request(600, 350)  # کاهش بیشتر سایز
         
         # Create overlay for video and audio message
         self.overlay = Gtk.Overlay()
@@ -164,23 +346,28 @@ class EmbeddedPlayer(Gtk.Box):
                 lbl.show()
 
         # --- UI controls setup ---
-        controls_container = Gtk.Box(spacing=12)
+        controls_container = Gtk.Box(spacing=8)
         self.pack_start(controls_container, False, False, 0)
 
-        main_controls = Gtk.Box(spacing=6)
+        main_controls = Gtk.Box(spacing=4)
         self.play_pause_btn = Gtk.Button(label="Play")
-        # تنظیم عرض ثابت برای دکمه Play/Pause
-        self.play_pause_btn.set_size_request(80, -1)  # عرض ثابت 80 پیکسل
-        self.minus_btn = Gtk.Button(label="−1 sec")
-        self.plus_btn = Gtk.Button(label="+1 sec")
+        self.play_pause_btn.set_size_request(70, -1)
+        
+        # دکمه‌های کنترل پیشرفته
+        self.fine_minus_btn = Gtk.Button(label="−0.1s")
+        self.minus_btn = Gtk.Button(label="−1s")
+        self.plus_btn = Gtk.Button(label="+1s")
+        self.fine_plus_btn = Gtk.Button(label="+0.1s")
+        
         self.in_btn = Gtk.Button(label="Set In")
         self.out_btn = Gtk.Button(label="Set Out")
 
-        for w in (self.play_pause_btn, self.minus_btn, self.plus_btn, self.in_btn, self.out_btn):
+        for w in (self.play_pause_btn, self.fine_minus_btn, self.minus_btn, 
+                  self.plus_btn, self.fine_plus_btn, self.in_btn, self.out_btn):
             main_controls.pack_start(w, False, False, 0)
 
         # Container for video controls
-        self.video_controls_box = Gtk.Box(spacing=6)
+        self.video_controls_box = Gtk.Box(spacing=4)
         self.rotate_left_btn = Gtk.Button(label="↶ 90°")
         self.rotate_right_btn = Gtk.Button(label="↷ 90°")
         self.flip_horizontal_btn = Gtk.Button(label="↔ Flip H")
@@ -206,10 +393,10 @@ class EmbeddedPlayer(Gtk.Box):
         controls_container.pack_start(self.video_controls_box, False, False, 0)
 
         seek_row = Gtk.Box(spacing=6)
-        self.pos_label = Gtk.Label(label="00:00:00")
-        self.seek = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 1.0, 0.01)
+        self.pos_label = Gtk.Label(label="00:00:00.000")
+        self.seek = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0.0, 1.0, 0.001)
         self.seek.set_draw_value(False)
-        self.duration_label = Gtk.Label(label="00:00:00")
+        self.duration_label = Gtk.Label(label="00:00:00.000")
         seek_row.pack_start(self.pos_label, False, False, 0)
         seek_row.pack_start(self.seek, True, True, 0)
         seek_row.pack_start(self.duration_label, False, False, 0)
@@ -217,8 +404,10 @@ class EmbeddedPlayer(Gtk.Box):
 
         # --- Connect buttons ---
         self.play_pause_btn.connect("clicked", self.on_play_pause)
-        self.minus_btn.connect("clicked", lambda w: self.seek_delta(-1))
-        self.plus_btn.connect("clicked", lambda w: self.seek_delta(1))
+        self.minus_btn.connect("clicked", lambda w: self.seek_delta(-self.get_seek_step()))
+        self.plus_btn.connect("clicked", lambda w: self.seek_delta(self.get_seek_step()))
+        self.fine_minus_btn.connect("clicked", lambda w: self.seek_delta(-self.get_fine_seek_step()))
+        self.fine_plus_btn.connect("clicked", lambda w: self.seek_delta(self.get_fine_seek_step()))
         self.rotate_left_btn.connect("clicked", lambda w: self.rotate_video("left"))
         self.rotate_right_btn.connect("clicked", lambda w: self.rotate_video("right"))
         self.flip_horizontal_btn.connect("clicked", lambda w: self.rotate_video("horizontal"))
@@ -240,7 +429,15 @@ class EmbeddedPlayer(Gtk.Box):
         self.bus = self.playbin.get_bus()
         self.bus.add_signal_watch()
         self.bus.connect("message", self.on_bus_message)
-        GLib.timeout_add(200, self.update_position)
+        GLib.timeout_add(100, self.update_position)
+
+    def get_seek_step(self):
+        settings = self.settings_callback()
+        return settings.get("seek_step", 1.0)
+
+    def get_fine_seek_step(self):
+        settings = self.settings_callback()
+        return settings.get("fine_seek_step", 0.1)
 
     def on_video_size_allocate(self, widget, allocation):
         """Called when video widget gets its size"""
@@ -266,9 +463,6 @@ class EmbeddedPlayer(Gtk.Box):
             scaled_width = int(self.display_height * video_ratio)
             self.padding_x = (self.display_width - scaled_width) // 2
             self.padding_y = 0
-        
-        print(f"Video: {self.video_width}x{self.video_height}, Display: {self.display_width}x{self.display_height}")
-        print(f"Padding: x={self.padding_x}, y={self.padding_y}")
 
     # --- Crop-related methods ---
     def on_crop_mode_toggled(self, widget):
@@ -474,9 +668,6 @@ class EmbeddedPlayer(Gtk.Box):
         if video_w <= 0 or video_h <= 0:
             return None
         
-        print(f"Crop coordinates: display=({x1:.0f},{y1:.0f})-({x2:.0f},{y2:.0f})")
-        print(f"Crop coordinates: video=({video_x},{video_y})-({video_w},{video_h})")
-        
         return f"crop={video_w}:{video_h}:{video_x}:{video_y}"
 
     def get_video_size(self):
@@ -586,8 +777,8 @@ class EmbeddedPlayer(Gtk.Box):
             self.video_controls_box.hide()
             
             # Reset UI elements
-            self.pos_label.set_text("00:00:00")
-            self.duration_label.set_text("00:00:00")
+            self.pos_label.set_text("00:00:00.000")
+            self.duration_label.set_text("00:00:00.000")
             self.seek.set_range(0.0, 1.0)
             self.seek.set_value(0.0)
             return
@@ -627,8 +818,8 @@ class EmbeddedPlayer(Gtk.Box):
                 pass
         
         # Reset UI elements
-        self.pos_label.set_text("00:00:00")
-        self.duration_label.set_text("00:00:00")
+        self.pos_label.set_text("00:00:00.000")
+        self.duration_label.set_text("00:00:00.000")
         self.seek.set_range(0.0, 1.0)
         self.seek.set_value(0.0)
         
@@ -670,9 +861,9 @@ class EmbeddedPlayer(Gtk.Box):
                 self.seek.set_range(0.0, self.duration)
             if pos is not None:
                 self.seek.set_value(pos)
-                self.pos_label.set_text(hms_str(pos))
+                self.pos_label.set_text(hmsms_str(pos))
                 if self.duration:
-                    self.duration_label.set_text(hms_str(self.duration))
+                    self.duration_label.set_text(hmsms_str(self.duration))
         return True
 
     def on_seek_press(self, widget, event):
@@ -686,7 +877,7 @@ class EmbeddedPlayer(Gtk.Box):
     def on_seek_value_changed(self, widget):
         if self.is_seeking:
             val = self.seek.get_value()
-            self.pos_label.set_text(hms_str(val))
+            self.pos_label.set_text(hmsms_str(val))
 
     def seek_to(self, seconds):
         if seconds < 0: seconds = 0
@@ -704,38 +895,104 @@ class EmbeddedPlayer(Gtk.Box):
         self.seek_to(pos + delta)
 
     def on_bus_message(self, bus, msg):
+        """Handle GStreamer bus messages"""
         if msg.type == Gst.MessageType.EOS:
+            # End of stream
             self.playbin.set_state(Gst.State.PAUSED)
             self.is_playing = False
             self.play_pause_btn.set_label("Play")
+            # Seek to beginning
+            self.seek_to(0)
         elif msg.type == Gst.MessageType.ERROR:
+            # Error handling
             err, dbg = msg.parse_error()
             print("GStreamer error:", err, dbg)
             self.playbin.set_state(Gst.State.NULL)
             self.is_playing = False
             self.play_pause_btn.set_label("Play")
+        elif msg.type == Gst.MessageType.WARNING:
+            # Warning handling
+            warn, dbg = msg.parse_warning()
+            print("GStreamer warning:", warn, dbg)
+        elif msg.type == Gst.MessageType.STATE_CHANGED:
+            # State change handling
+            old_state, new_state, pending_state = msg.parse_state_changed()
+            if msg.src == self.playbin:
+                print(f"Pipeline state changed: {old_state} -> {new_state}")
 
 
 class NamaCut(Gtk.Window):
     def __init__(self):
-        super().__init__(title="NamaCut - Video Cutter v1.2")
-        self.set_default_size(1000, 780)
+        super().__init__(title="NamaCut - Video Cutter v1.3")
+        self.set_default_size(800, 550)  # ارتفاع کمتر
         self.connect("destroy", Gtk.main_quit)
+        
+        # تنظیمات پیشفرض
+        self.settings = {
+            "format": "mp4",
+            "quality": "1080p",
+            "bitrate": 192,
+            "seek_step": 1.0,
+            "fine_seek_step": 0.1,
+            "action": 0
+        }
         
         # Enable drag and drop
         self.drag_dest_set(Gtk.DestDefaults.ALL, [], Gdk.DragAction.COPY)
         self.drag_dest_add_uri_targets()
         self.connect("drag-data-received", self.on_drag_data_received)
         
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        vbox.set_border_width(10)
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        vbox.set_border_width(6)
         self.add(vbox)
 
+        # نوار ابزار بالا
+        toolbar = Gtk.Box(spacing=6)
+        
+        # آیکون برنامه
+        try:
+            app_icon = Gtk.Image.new_from_icon_name("avidemux", Gtk.IconSize.DND)
+        except:
+            try:
+                app_icon = Gtk.Image.new_from_icon_name("video-x-generic", Gtk.IconSize.DND)
+            except:
+                app_icon = Gtk.Image.new_from_icon_name("gtk-media-play", Gtk.IconSize.DND)
+        
+        toolbar.pack_start(app_icon, False, False, 0)
+        
+        # عنوان برنامه
+        title_label = Gtk.Label()
+        title_label.set_markup("<b>NamaCut</b>")
+        toolbar.pack_start(title_label, False, False, 6)
+        
         # Drag and drop hint
         drop_hint = Gtk.Label()
-        drop_hint.set_markup("<span foreground='gray'><i>💡 Tip: You can also drag and drop video files here</i></span>")
-        drop_hint.set_margin_bottom(10)
-        vbox.pack_start(drop_hint, False, False, 0)
+        drop_hint.set_markup("<span foreground='gray'><i>Drag & drop video files here</i></span>")
+        toolbar.pack_start(drop_hint, False, False, 0)
+        
+        toolbar.pack_start(Gtk.Label(), True, True, 0)  # Spacer
+        
+        # دکمه About
+        self.about_btn = Gtk.Button()
+        self.about_btn.set_tooltip_text("About")
+        about_icon = Gtk.Image.new_from_icon_name("help-about-symbolic", Gtk.IconSize.BUTTON)
+        self.about_btn.set_image(about_icon)
+        self.about_btn.connect("clicked", self.on_about_clicked)
+        toolbar.pack_start(self.about_btn, False, False, 0)
+        
+        # دکمه تنظیمات
+        self.settings_btn = Gtk.Button()
+        self.settings_btn.set_tooltip_text("Export Settings")
+        settings_icon = Gtk.Image.new_from_icon_name("preferences-system-symbolic", Gtk.IconSize.BUTTON)
+        self.settings_btn.set_image(settings_icon)
+        self.settings_btn.connect("clicked", self.on_settings_clicked)
+        toolbar.pack_start(self.settings_btn, False, False, 0)
+        
+        vbox.pack_start(toolbar, False, False, 0)
+
+        # Separator
+        sep1 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        vbox.pack_start(sep1, False, False, 4)
 
         top = Gtk.Box(spacing=6)
         self.filechooser = Gtk.FileChooserButton(title="Select video file", action=Gtk.FileChooserAction.OPEN)
@@ -747,79 +1004,72 @@ class NamaCut(Gtk.Window):
 
         vbox.pack_start(top, False, False, 0)
 
-        self.player = EmbeddedPlayer()
+        self.player = EmbeddedPlayer(self.get_settings)
         vbox.pack_start(self.player, True, True, 0)
 
         self.player.in_btn.connect("clicked", self._set_in)
         self.player.out_btn.connect("clicked", self._set_out)
 
-        grid = Gtk.Grid(column_spacing=6, row_spacing=6)
-        vbox.pack_start(grid, False, False, 0)
-        grid.attach(Gtk.Label(label="Start (H:M:S)"), 0, 0, 1, 1)
+        # بخش زمان‌بندی با میلی‌ثانیه
+        time_grid = Gtk.Grid(column_spacing=6, row_spacing=4)
+        vbox.pack_start(time_grid, False, False, 0)
+        
+        # ردیف Start
+        time_grid.attach(Gtk.Label(label="Start:"), 0, 0, 1, 1)
+        
+        start_box = Gtk.Box(spacing=2)
         self.start_h = Gtk.SpinButton.new_with_range(0, 99, 1)
+        self.start_h.set_size_request(45, -1)
         self.start_m = Gtk.SpinButton.new_with_range(0, 59, 1)
+        self.start_m.set_size_request(45, -1)
         self.start_s = Gtk.SpinButton.new_with_range(0, 59, 1)
-        start_box = Gtk.Box(spacing=4)
-        for w in (self.start_h, self.start_m, self.start_s): start_box.pack_start(w, False, False, 0)
-        grid.attach(start_box, 1, 0, 3, 1)
-        grid.attach(Gtk.Label(label="End (H:M:S)"), 0, 1, 1, 1)
+        self.start_s.set_size_request(45, -1)
+        self.start_ms = Gtk.SpinButton.new_with_range(0, 999, 1)
+        self.start_ms.set_size_request(55, -1)
+        
+        start_box.pack_start(self.start_h, False, False, 0)
+        start_box.pack_start(Gtk.Label(label="h"), False, False, 0)
+        start_box.pack_start(self.start_m, False, False, 0)
+        start_box.pack_start(Gtk.Label(label="m"), False, False, 0)
+        start_box.pack_start(self.start_s, False, False, 0)
+        start_box.pack_start(Gtk.Label(label="s"), False, False, 0)
+        start_box.pack_start(self.start_ms, False, False, 0)
+        start_box.pack_start(Gtk.Label(label="ms"), False, False, 0)
+        
+        time_grid.attach(start_box, 1, 0, 1, 1)
+        
+        # ردیف End
+        time_grid.attach(Gtk.Label(label="End:"), 0, 1, 1, 1)
+        
+        end_box = Gtk.Box(spacing=2)
         self.end_h = Gtk.SpinButton.new_with_range(0, 99, 1)
+        self.end_h.set_size_request(45, -1)
         self.end_m = Gtk.SpinButton.new_with_range(0, 59, 1)
+        self.end_m.set_size_request(45, -1)
         self.end_s = Gtk.SpinButton.new_with_range(0, 59, 1)
-        end_box = Gtk.Box(spacing=4)
-        for w in (self.end_h, self.end_m, self.end_s): end_box.pack_start(w, False, False, 0)
-        grid.attach(end_box, 1, 1, 3, 1)
-
-        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-        vbox.pack_start(sep, False, False, 6)
-
-        # Container for format buttons
-        self.format_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        self.end_s.set_size_request(45, -1)
+        self.end_ms = Gtk.SpinButton.new_with_range(0, 999, 1)
+        self.end_ms.set_size_request(55, -1)
         
-        # Format selection box
-        self.fmt_box = Gtk.Box(spacing=6)
-        self.format_group = []
-        self.video_format_buttons = []  # لیست دکمه‌های فرمت ویدئویی
-        self.audio_format_buttons = []  # لیست دکمه‌های فرمت صوتی
+        end_box.pack_start(self.end_h, False, False, 0)
+        end_box.pack_start(Gtk.Label(label="h"), False, False, 0)
+        end_box.pack_start(self.end_m, False, False, 0)
+        end_box.pack_start(Gtk.Label(label="m"), False, False, 0)
+        end_box.pack_start(self.end_s, False, False, 0)
+        end_box.pack_start(Gtk.Label(label="s"), False, False, 0)
+        end_box.pack_start(self.end_ms, False, False, 0)
+        end_box.pack_start(Gtk.Label(label="ms"), False, False, 0)
         
-        formats = [
-            ("MP4", "mp4"), ("MKV", "mkv"), ("WEBM", "webm"),
-            ("AVI", "avi"), ("MOV", "mov"), ("WMV", "wmv"),
-            ("MP3", "mp3"), ("AAC", "aac"), ("WAV", "wav"),
-            ("Original (copy)", "original")
-        ]
-        first_btn = None
-        for label, tag in formats:
-            btn = Gtk.RadioButton.new_with_label_from_widget(first_btn, label)
-            btn.format_tag = tag
-            btn.connect("toggled", self.on_format_changed)
-            self.fmt_box.pack_start(btn, False, False, 0)
-            self.format_group.append(btn)
-            
-            # دسته‌بندی دکمه‌ها
-            if tag in ["mp4", "mkv", "webm", "avi", "mov", "wmv"]:
-                self.video_format_buttons.append(btn)
-            elif tag in ["mp3", "aac", "wav"]:
-                self.audio_format_buttons.append(btn)
-                
-            if first_btn is None:
-                first_btn = btn
-                btn.set_active(True)
-        
-        self.format_container.pack_start(self.fmt_box, False, False, 0)
+        time_grid.attach(end_box, 1, 1, 1, 1)
 
-        self.quality_box = Gtk.Box(spacing=6)
-        self.quality_box.pack_start(Gtk.Label(label="Quality:"), False, False, 0)
-        self.quality = Gtk.ComboBoxText()
-        self.quality_box.pack_start(self.quality, False, False, 0)
-        self.format_container.pack_start(self.quality_box, False, False, 0)
+        # Separator
+        sep2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        vbox.pack_start(sep2, False, False, 4)
 
-        vbox.pack_start(self.format_container, False, False, 0)
-
-        self.on_format_changed()
-
+        # دکمه‌های اصلی
         actions = Gtk.Box(spacing=6)
         self.trim_btn = Gtk.Button(label="Export")
+        self.trim_btn.get_style_context().add_class("suggested-action")
         self.abort_btn = Gtk.Button(label="Abort")
         self.abort_btn.set_sensitive(False)
         self.quit_btn = Gtk.Button(label="Quit")
@@ -843,29 +1093,41 @@ class NamaCut(Gtk.Window):
         progress_box.pack_start(self.percent_label, False, False, 0)
         vbox.pack_start(progress_box, False, False, 4)
 
-        bottom_box = Gtk.Box(spacing=12)
-        self.about_btn = Gtk.Button(label="About NamaCut")
-        bottom_box.pack_start(self.about_btn, False, False, 0)
-        bottom_box.pack_start(Gtk.Label(), True, True, 0)
-        action_label = Gtk.Label(label="After processing:")
-        bottom_box.pack_start(action_label, False, False, 0)
-        self.action_combo = Gtk.ComboBoxText()
-        self.action_combo.append_text("No action")
-        self.action_combo.append_text("Close App")
-        self.action_combo.append_text("Open Output Folder")
-        self.action_combo.set_active(0)
-        self.action_combo.set_direction(Gtk.TextDirection.LTR)
-        bottom_box.pack_start(self.action_combo, False, False, 0)
-        vbox.pack_start(bottom_box, False, False, 0)
-
         self.current_process = None
         self.is_processing = False
 
         self.filechooser.connect("file-set", self.on_file_selected)
         self.trim_btn.connect("clicked", self.on_trim)
         self.abort_btn.connect("clicked", self.on_abort)
-        self.about_btn.connect("clicked", self.show_credits)
         self.quit_btn.connect("clicked", lambda w: Gtk.main_quit())
+
+    def on_about_clicked(self, btn):
+        about = Gtk.AboutDialog(transient_for=self, modal=True)
+        about.set_program_name("NamaCut")
+        about.set_version("1.3")
+        about.set_comments("Video Editor and Cutter")
+        about.set_authors(["Pourdaryaei"])
+        about.set_website("https://pourdaryaei.ir")
+        # use the installed icon name if available
+        try:
+            about.set_logo_icon_name("avidemux")
+        except Exception:
+            pass
+        about.run()
+        about.destroy()
+
+    def get_settings(self):
+        return self.settings
+
+    def on_settings_clicked(self, widget):
+        dialog = SettingsDialog(self, self.settings)
+        response = dialog.run()
+        
+        if response == Gtk.ResponseType.OK:
+            self.settings = dialog.get_settings()
+            print("Settings saved:", self.settings)
+        
+        dialog.destroy()
 
     def on_drag_data_received(self, widget, drag_context, x, y, data, info, time):
         """Handle drag and drop files"""
@@ -915,82 +1177,64 @@ class NamaCut(Gtk.Window):
         dialog.run()
         dialog.destroy()
 
-    def update_format_buttons(self, file_type):
-        """بروزرسانی وضعیت دکمه‌های فرمت بر اساس نوع فایل"""
-        print(f"Updating format buttons for: {file_type}")
-        
-        # چون فقط ویدئو قبول میکنیم، همه فرمت‌ها نمایش داده می‌شوند
-        for btn in self.format_group:
-            btn.show()
-
     # ---------------------------
-    # In/out helpers
+    # In/out helpers with milliseconds
     # ---------------------------
     def _set_in(self, *args):
         pos = self.player.query_position()
         if pos is not None:
-            end_time = hms_to_seconds(self.end_h.get_value_as_int(), self.end_m.get_value_as_int(), self.end_s.get_value_as_int())
+            end_time = hmsms_to_seconds(
+                self.end_h.get_value_as_int(), 
+                self.end_m.get_value_as_int(), 
+                self.end_s.get_value_as_int(),
+                self.end_ms.get_value_as_int()
+            )
             if pos > end_time:
                 self.show_error_dialog("Invalid In Point", "In point can't be after Out point!")
                 return
-            h, m, s = seconds_to_hms(pos)
-            self.start_h.set_value(h); self.start_m.set_value(m); self.start_s.set_value(s)
+            h, m, s, ms = seconds_to_hmsms(pos)
+            self.start_h.set_value(h)
+            self.start_m.set_value(m)
+            self.start_s.set_value(s)
+            self.start_ms.set_value(ms)
 
     def _set_out(self, *args):
         pos = self.player.query_position()
         if pos is not None:
-            start_time = hms_to_seconds(self.start_h.get_value_as_int(), self.start_m.get_value_as_int(), self.start_s.get_value_as_int())
+            start_time = hmsms_to_seconds(
+                self.start_h.get_value_as_int(), 
+                self.start_m.get_value_as_int(), 
+                self.start_s.get_value_as_int(),
+                self.start_ms.get_value_as_int()
+            )
             if pos < start_time:
                 self.show_error_dialog("Invalid Out Point", "Out point can't be before In point!")
                 return
-            h, m, s = seconds_to_hms(pos)
-            self.end_h.set_value(h); self.end_m.set_value(m); self.end_s.set_value(s)
+            h, m, s, ms = seconds_to_hmsms(pos)
+            self.end_h.set_value(h)
+            self.end_m.set_value(m)
+            self.end_s.set_value(s)
+            self.end_ms.set_value(ms)
 
     def validate_times(self):
-        start = hms_to_seconds(self.start_h.get_value_as_int(), self.start_m.get_value_as_int(), self.start_s.get_value_as_int())
-        end = hms_to_seconds(self.end_h.get_value_as_int(), self.end_m.get_value_as_int(), self.end_s.get_value_as_int())
+        start = hmsms_to_seconds(
+            self.start_h.get_value_as_int(), 
+            self.start_m.get_value_as_int(), 
+            self.start_s.get_value_as_int(),
+            self.start_ms.get_value_as_int()
+        )
+        end = hmsms_to_seconds(
+            self.end_h.get_value_as_int(), 
+            self.end_m.get_value_as_int(), 
+            self.end_s.get_value_as_int(),
+            self.end_ms.get_value_as_int()
+        )
         if start >= end:
             return False, "Start must be less than End."
         return True, ""
 
-    def show_dialog(self, text, error=False):
-        """Main-thread-friendly dialog helper."""
-        if error:
-            self.show_error_dialog("Error", text)
-        else:
-            self.show_info_dialog("Information", text)
-
     def get_selected_format(self):
-        for btn in self.format_group:
-            if btn.get_active():
-                return btn.format_tag
-        return None
-
-    def show_credits(self, widget):
-        credits_text = """NamaCut - Video/Audio Cutter v1.1
-
-Developer: Pourdaryaei
-Website: www.pourdaryaei.ir
-Email: Pourdaryaei@yandex.com
-
-Features:
-• Video cutting and trimming
-• Crop, rotate, and flip videos
-• Multiple output formats
-• Drag and drop support
-• Quality settings
-• Batch processing support
-"""
-        dialog = Gtk.MessageDialog(
-            transient_for=self,
-            flags=0,
-            message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.OK,
-            text="About NamaCut"
-        )
-        dialog.format_secondary_text(credits_text)
-        dialog.run()
-        dialog.destroy()
+        return self.settings.get("format", "mp4")
 
     def file_filter(self):
         f = Gtk.FileFilter()
@@ -1015,9 +1259,6 @@ Features:
             )
             return
         
-        # بروزرسانی وضعیت دکمه‌های فرمت
-        self.update_format_buttons("video")
-        
         # Reset player with new file
         self.player.set_file(path)
         
@@ -1025,15 +1266,15 @@ Features:
             out = subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration",
                 "-of", "default=noprint_wrappers=1:nokey=1", path], text=True, stderr=subprocess.DEVNULL)
             durf = float(out.strip())
-            h, m, s = seconds_to_hms(durf)
-            self.duration_label.set_text(f"Duration: {h:02d}:{m:02d}:{s:02d}")
-            self.start_h.set_value(0); self.start_m.set_value(0); self.start_s.set_value(0)
-            self.end_h.set_value(h); self.end_m.set_value(m); self.end_s.set_value(s)
+            h, m, s, ms = seconds_to_hmsms(durf)
+            self.duration_label.set_text(f"Duration: {h:02d}:{m:02d}:{s:02d}.{ms:03d}")
+            self.start_h.set_value(0); self.start_m.set_value(0); self.start_s.set_value(0); self.start_ms.set_value(0)
+            self.end_h.set_value(h); self.end_m.set_value(m); self.end_s.set_value(s); self.end_ms.set_value(ms)
         except Exception:
             self.duration_label.set_text("Duration: Unknown")
             # Reset time inputs on error
-            self.start_h.set_value(0); self.start_m.set_value(0); self.start_s.set_value(0)
-            self.end_h.set_value(0); self.end_m.set_value(0); self.end_s.set_value(0)
+            self.start_h.set_value(0); self.start_m.set_value(0); self.start_s.set_value(0); self.start_ms.set_value(0)
+            self.end_h.set_value(0); self.end_m.set_value(0); self.end_s.set_value(0); self.end_ms.set_value(0)
 
     # ---------------------------
     # FFmpeg filter builder
@@ -1196,8 +1437,11 @@ Features:
             GLib.idle_add(self.progress.set_fraction, 0.0)
             GLib.idle_add(self.percent_label.set_text, "0%")
 
-    def execute_post_action(self, action, output_file):
+    def execute_post_action(self, action_index, output_file):
         try:
+            actions = ["No action", "Close App", "Open Output Folder"]
+            action = actions[action_index]
+            
             if action == "Close App":
                 print("Processing completed. Closing application...")
                 GLib.idle_add(Gtk.main_quit)
@@ -1228,8 +1472,18 @@ Features:
         if self.player.is_playing:
             self.player.pause()
 
-        start = hms_to_seconds(self.start_h.get_value_as_int(), self.start_m.get_value_as_int(), self.start_s.get_value_as_int())
-        end = hms_to_seconds(self.end_h.get_value_as_int(), self.end_m.get_value_as_int(), self.end_s.get_value_as_int())
+        start = hmsms_to_seconds(
+            self.start_h.get_value_as_int(), 
+            self.start_m.get_value_as_int(), 
+            self.start_s.get_value_as_int(),
+            self.start_ms.get_value_as_int()
+        )
+        end = hmsms_to_seconds(
+            self.end_h.get_value_as_int(), 
+            self.end_m.get_value_as_int(), 
+            self.end_s.get_value_as_int(),
+            self.end_ms.get_value_as_int()
+        )
         total_duration = end - start
         
         if total_duration <= 0:
@@ -1237,11 +1491,8 @@ Features:
             return
             
         fmt = self.get_selected_format()
-        if fmt is None:
-            self.show_error_dialog("No Format Selected", "Please select one output format.")
-            return
-
-        quality = self.quality.get_active_text()
+        quality = self.settings.get("quality", "1080p")
+        bitrate = int(self.settings.get("bitrate", 192))
         base = os.path.splitext(os.path.basename(path))[0]
 
         def do_trim():
@@ -1275,7 +1526,7 @@ Features:
                         # must re-encode to apply filters: choose safe defaults
                         cmd = ["ffmpeg", "-y", "-i", path, "-ss", str(start), "-to", str(end),
                                "-vf", vf, "-c:v", "libx264", "-preset", "medium", "-crf", "23",
-                               "-c:a", "aac", "-b:a", "192k", out]
+                               "-c:a", "aac", "-b:a", f"{bitrate}k", out]
                     success = self.run_ffmpeg_with_progress(cmd, total_duration, out)
 
                 elif fmt in ["mp3", "aac", "wav"]:
@@ -1284,11 +1535,9 @@ Features:
                     out_name = f"{base}{quality_suffix}"
                     out = unique_output_path(out_name, ext, fmt)
                     if fmt == "aac":
-                        bitrate = quality.split(" ")[0] + "k"
-                        cmd = ["ffmpeg", "-y", "-i", path, "-ss", str(start), "-to", str(end), "-vn", "-acodec", "aac", "-b:a", bitrate, out]
+                        cmd = ["ffmpeg", "-y", "-i", path, "-ss", str(start), "-to", str(end), "-vn", "-acodec", "aac", "-b:a", f"{bitrate}k", out]
                     elif fmt == "mp3":
-                        bitrate = quality.split(" ")[0] + "k"
-                        cmd = ["ffmpeg", "-y", "-i", path, "-ss", str(start), "-to", str(end), "-vn", "-acodec", "libmp3lame", "-b:a", bitrate, out]
+                        cmd = ["ffmpeg", "-y", "-i", path, "-ss", str(start), "-to", str(end), "-vn", "-acodec", "libmp3lame", "-b:a", f"{bitrate}k", out]
                     elif fmt == "wav":
                         # WAV: uncompressed PCM 16-bit
                         cmd = ["ffmpeg", "-y", "-i", path, "-ss", str(start), "-to", str(end), "-vn", "-acodec", "pcm_s16le", out]
@@ -1302,29 +1551,29 @@ Features:
 
                     # choose codec set per container - بهبود تنظیمات WMV
                     if fmt == "mp4":
-                        codec = ["-c:v", "libx264", "-preset", "medium", "-crf", "23", "-c:a", "aac", "-b:a", "192k"]
+                        codec = ["-c:v", "libx264", "-preset", "medium", "-crf", "23", "-c:a", "aac", "-b:a", f"{bitrate}k"]
                     elif fmt == "mkv":
-                        codec = ["-c:v", "libx264", "-preset", "medium", "-crf", "23", "-c:a", "aac", "-b:a", "192k"]
+                        codec = ["-c:v", "libx264", "-preset", "medium", "-crf", "23", "-c:a", "aac", "-b:a", f"{bitrate}k"]
                     elif fmt == "webm":
-                        codec = ["-c:v", "libvpx-vp9", "-crf", "30", "-b:v", "0", "-c:a", "libopus", "-b:a", "128k"]
+                        codec = ["-c:v", "libvpx-vp9", "-crf", "30", "-b:v", "0", "-c:a", "libopus", "-b:a", f"{bitrate}k"]
                     elif fmt == "avi":
-                        codec = ["-c:v", "mpeg4", "-qscale:v", "3", "-c:a", "mp3", "-b:a", "192k"]
+                        codec = ["-c:v", "mpeg4", "-qscale:v", "3", "-c:a", "mp3", "-b:a", f"{bitrate}k"]
                     elif fmt == "mov":
-                        codec = ["-c:v", "libx264", "-preset", "medium", "-crf", "23", "-c:a", "aac", "-b:a", "192k"]
+                        codec = ["-c:v", "libx264", "-preset", "medium", "-crf", "23", "-c:a", "aac", "-b:a", f"{bitrate}k"]
                     elif fmt == "wmv":
                         # تنظیمات بهبود یافته برای WMV
                         codec = [
                             "-c:v", "wmv2", 
                             "-qscale:v", "5",  # کیفیت بهتر
                             "-c:a", "wmav2", 
-                            "-b:a", "128k",
+                            "-b:a", f"{bitrate}k",
                             "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"  # اطمینان از ابعاد زوج
                         ]
                         # اگر فیلترهای پیچیده داریم، از کدک ساده‌تر استفاده کنیم
                         if vf and ("transpose" in vf or "hflip" in vf or "vflip" in vf):
-                            codec = ["-c:v", "mpeg4", "-qscale:v", "4", "-c:a", "mp3", "-b:a", "192k"]
+                            codec = ["-c:v", "mpeg4", "-qscale:v", "4", "-c:a", "mp3", "-b:a", f"{bitrate}k"]
                     else:
-                        codec = ["-c:v", "libx264", "-preset", "medium", "-crf", "23", "-c:a", "aac", "-b:a", "192k"]
+                        codec = ["-c:v", "libx264", "-preset", "medium", "-crf", "23", "-c:a", "aac", "-b:a", f"{bitrate}k"]
 
                     # build command and include vf if necessary
                     if needs_video_reencode and vf:
@@ -1344,10 +1593,10 @@ Features:
                     GLib.idle_add(self.progress.set_fraction, 1.0)
                     GLib.idle_add(self.percent_label.set_text, "100%")
 
-                    action = self.action_combo.get_active_text()
-                    if action != "No action":
+                    action_index = self.settings.get("action", 0)
+                    if action_index != 0:  # اگر "No action" نیست
                         # deferred execution of chosen action (on main thread)
-                        GLib.idle_add(self.execute_post_action, action, out)
+                        GLib.idle_add(self.execute_post_action, action_index, out)
                     else:
                         # NEW: explicitly notify user that processing finished (No action)
                         GLib.idle_add(lambda: self.show_info_dialog("Processing Completed", "Video processing completed successfully!"))
@@ -1384,38 +1633,6 @@ Features:
         # disable button and run worker thread
         self.trim_btn.set_sensitive(False)
         threading.Thread(target=do_trim, daemon=True).start()
-
-    def on_format_changed(self, widget=None):
-        format_tag = self.get_selected_format()
-        self.quality.remove_all()
-        if format_tag in ["mp4", "mkv", "webm", "avi", "mov", "wmv"]:
-            self.quality.append_text("4K")
-            self.quality.append_text("2K")
-            self.quality.append_text("1080p")
-            self.quality.append_text("720p")
-            self.quality.append_text("480p")
-            self.quality.append_text("Original")
-            self.quality.set_active(5)
-            self.quality_box.show()
-        elif format_tag in ["mp3", "aac", "wav"]:
-            if format_tag == "mp3":
-                self.quality.append_text("320 kbps")
-                self.quality.append_text("256 kbps")
-                self.quality.append_text("192 kbps")
-                self.quality.append_text("128 kbps")
-            elif format_tag == "aac":
-                self.quality.append_text("256 kbps")
-                self.quality.append_text("192 kbps")
-                self.quality.append_text("128 kbps")
-                self.quality.append_text("96 kbps")
-            elif format_tag == "wav":
-                self.quality.append_text("24-bit HD")
-                self.quality.append_text("16-bit CD")
-                self.quality.append_text("8-bit")
-            self.quality.set_active(1)
-            self.quality_box.show()
-        else:
-            self.quality_box.hide()
 
 
 if __name__ == "__main__":
