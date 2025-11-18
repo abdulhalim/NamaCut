@@ -5,7 +5,7 @@ It allows you to easily cut, preview, rotate, crop, and convert videos using FFm
 
 ## Screenshot
 
-![NamaCut Screenshot](https://raw.githubusercontent.com/abdulhalim/NamaCut/refs/heads/main/Screenshot_NC.png)
+![NamaCut Screenshot](https://raw.githubusercontent.com/abdulhalim/NamaCut/refs/heads/main/Screenshot.png)
 
 ---
 
