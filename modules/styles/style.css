@@ -1,0 +1,402 @@
+* {
+    font-family: "Cantarell", "Sans", "Arial";
+}
+
+.main-container {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+}
+
+.video-container {
+    background-color: #1e1e2e;
+    border: 1px solid #313244;
+    border-radius: 8px;
+}
+
+.video-controls {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+}
+
+.control-btn {
+    background-color: #313244;
+    border: none;
+    color: #cdd6f4;
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.control-btn:hover {
+    background-color: #45475a;
+}
+
+.play-btn {
+    background-color: #89b4fa;
+    color: #1e1e2e;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    padding: 6px;
+    font-size: 11px;
+}
+
+.play-btn:hover {
+    background-color: #74c7ec;
+}
+
+.set-btn {
+    background-color: #a6e3a1;
+    color: #1e1e2e;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    padding: 6px;
+    font-size: 11px;
+}
+
+.set-btn:hover {
+    background-color: #94d2a1;
+}
+
+.crop-btn {
+    background-color: #f9e2af;
+    color: #1e1e2e;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    padding: 6px;
+    font-size: 11px;
+}
+
+.crop-btn:hover {
+    background-color: #f5d895;
+}
+
+.preset-select {
+    background-color: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+
+.seek-container {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+    border-radius: 8px;
+    padding: 8px;
+    margin: 10px;
+}
+
+.seek-bar {
+    background-color: #313244;
+    color: #cdd6f4;
+    border-radius: 4px;
+}
+
+.seek-bar trough {
+    background-color: #45475a;
+    border-radius: 4px;
+    min-height: 6px;
+}
+
+.seek-bar trough highlight {
+    background-color: #89b4fa;
+    border-radius: 4px;
+    min-height: 6px;
+}
+
+.seek-bar trough slider {
+    background-color: #89b4fa;
+    border: 2px solid #cdd6f4;
+    border-radius: 50%;
+    min-width: 12px;
+    min-height: 12px;
+    margin: -6px;
+}
+
+.time-display {
+    color: #cdd6f4;
+    font-family: monospace;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.time-section-label {
+    color: #cdd6f4;
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.time-inputs entry {
+    background-color: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 4px;
+    padding: 4px;
+    font-size: 11px;
+}
+
+.panel {
+    background: rgba(24, 24, 37, 0.95);
+    border: 1px solid #313244;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+}
+
+.edit-btn {
+    background-color: #313244;
+    border: none;
+    color: #cdd6f4;
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.edit-btn:hover {
+    background-color: #45475a;
+}
+
+.export-btn {
+    background-color: #89b4fa;
+    color: #1e1e2e;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    padding: 6px;
+    font-size: 11px;
+}
+
+.export-btn:hover {
+    background-color: #74c7ec;
+}
+
+.abort-btn {
+    background-color: #f38ba8;
+    color: #1e1e2e;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    padding: 6px;
+    font-size: 11px;
+}
+
+.abort-btn:hover {
+    background-color: #eba0ac;
+}
+
+.quit-btn {
+    background-color: #313244;
+    border: none;
+    color: #cdd6f4;
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.quit-btn:hover {
+    background-color: #45475a;
+}
+
+.progress-container {
+    background-color: #1e1e2e;
+    border-radius: 8px;
+    padding: 8px;
+    margin: 10px;
+}
+
+.progress-bar {
+    background-color: #313244;
+    border-radius: 4px;
+    font-size: 0.8em;
+}
+
+.progress-bar trough {
+    background-color: #45475a;
+    border-radius: 4px;
+    min-height: 6px;
+}
+
+.progress-bar trough progress {
+    background-color: #89b4fa;
+    border-radius: 4px;
+    min-height: 6px;
+}
+
+.format-label {
+    color: #a6adc8;
+    font-size: 0.9em;
+}
+
+.format-value {
+    color: #cdd6f4;
+    font-weight: 600;
+}
+
+.settings-btn {
+    background-color: #313244;
+    border: 1px solid #45475a;
+    color: #cdd6f4;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+
+.settings-btn:hover {
+    background-color: #45475a;
+}
+
+.control-label {
+    color: #a6adc8;
+    font-size: 0.9em;
+}
+
+.post-action-select {
+    background-color: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+
+.status-text {
+    color: #a6adc8;
+    font-size: 0.9em;
+    font-style: italic;
+}
+
+.video-info-label {
+    color: #cdd6f4;
+    font-family: monospace;
+    font-size: 11px;
+    margin-left: 8px;
+}
+
+.file-chooser {
+    background-color: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 4px;
+}
+
+.about-btn {
+    background-color: #313244;
+    border: 1px solid #45475a;
+    color: #cdd6f4;
+    border-radius: 4px;
+    padding: 6px;
+}
+
+.about-btn:hover {
+    background-color: #45475a;
+}
+
+.left-panel {
+    background-color: #1e1e2e;
+}
+
+.video-frame {
+    background-color: #1e1e2e;
+    border: 1px solid #313244;
+    border-radius: 8px;
+}
+
+.action-buttons {
+    background-color: transparent;
+    border: none;
+}
+
+.time-box {
+    background-color: #1e1e2e;
+    border-radius: 8px;
+    padding: 8px;
+    margin: 10px;
+}
+
+.time-inputs {
+    background-color: transparent;
+    border: none;
+}
+
+.time-inputs spinbutton {
+    background-color: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 4px;
+    padding: 4px;
+    font-size: 11px;
+}
+
+/* Dialog styles */
+dialog {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+}
+
+.dialog .content-area {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+}
+
+.dialog .action-area {
+    background-color: #1e1e2e;
+    border-top: 1px solid #313244;
+}
+
+.dialog button {
+    background-color: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+
+.dialog button:hover {
+    background-color: #45475a;
+}
+
+.dialog entry {
+    background-color: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+}
+
+.dialog scale {
+    background-color: #313244;
+    color: #cdd6f4;
+}
+
+.dialog scale trough {
+    background-color: #45475a;
+    border-radius: 4px;
+    min-height: 6px;
+}
+
+.dialog scale trough highlight {
+    background-color: #89b4fa;
+    border-radius: 4px;
+    min-height: 6px;
+}
+
+.dialog label {
+    color: #cdd6f4;
+}
+
+.dialog frame {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+    border: 1px solid #313244;
+    border-radius: 8px;
+}
+
+.dialog frame > border {
+    border: 1px solid #313244;
+    border-radius: 8px;
+}
+
+.dialog frame > label {
+    color: #cdd6f4;
+    background-color: #1e1e2e;
+}

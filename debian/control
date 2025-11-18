@@ -1,0 +1,15 @@
+Source: namacut
+Section: video
+Priority: optional
+Maintainer: Pourdaryaei <pourdaryaei@yandex.com>
+Build-Depends: debhelper-compat (= 13), dh-python, python3-setuptools, python3-all
+Standards-Version: 4.5.1
+Homepage: https://pourdaryaei.ir
+
+Package: namacut
+Architecture: any
+Depends: ${python3:Depends}, ${misc:Depends}, python3-gi, gir1.2-gtk-3.0, gir1.2-gst-1.0, ffmpeg
+Description: Video Cutter and Editor
+ NamaCut is a simple yet powerful video cutter and editor
+ built with GTK3 and GStreamer. It allows you to cut, rotate,
+ and flip video files with an easy-to-use interface.
