@@ -5,7 +5,7 @@ It allows you to easily cut, preview, rotate, crop, and convert videos using FFm
 
 ## Screenshot
 
-![NamaCut Screenshot](https://raw.githubusercontent.com/YOUR_USERNAME/namacut/refs/heads/main/Screenshot_NC.png)
+![NamaCut Screenshot](https://raw.githubusercontent.com/abdulhalim/NamaCut/refs/heads/main/Screenshot_NC.png)
 
 ---
 
@@ -28,7 +28,7 @@ It allows you to easily cut, preview, rotate, crop, and convert videos using FFm
 
 ### 1. Install (Debian/Ubuntu - Recommended)
 
-Download the latest `.deb` package from the [Releases](https://github.com/YOUR_USERNAME/namacut/releases) page and install:
+Download the latest `.deb` package from the [Releases](https://github.com/abdulhalim/NamaCut/releases) page and install:
 
 ```bash
 sudo dpkg -i namacut_2.0-1_amd64.deb
@@ -46,8 +46,8 @@ If you prefer to run directly from the source code:
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/YOUR_USERNAME/namacut.git
-    cd namacut
+    git clone https://github.com/abdulhalim/NamaCut.git
+    cd NamaCut
     ```
 2.  Install dependencies:
     ```bash
