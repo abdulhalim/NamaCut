@@ -1,6 +1,6 @@
-
-```markdown
 # NamaCut - Video Cutter and Editor
+
+![NamaCut Screenshot](https://raw.githubusercontent.com/abdulhalim/NamaCut/refs/heads/main/Screenshot.png)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -18,10 +18,6 @@ NamaCut is a simple, cross-platform video cutter and editor built with Python an
 - Rotate, flip, and crop videos
 - Export in various formats (MP4, MKV, WebM, MP3, AAC, FLAC)
 - Process videos with FFmpeg in the background
-
-## Screenshot
-
-![NamaCut Screenshot](https://raw.githubusercontent.com/abdulhalim/NamaCut/refs/heads/main/Screenshot.png)
 
 ## Prerequisites
 
@@ -338,4 +334,3 @@ Website: https://pourdaryaei.ir
 ---
 
 **Note**: After installation, you may need to log out and log back in for all context menu changes to take effect.
-```
