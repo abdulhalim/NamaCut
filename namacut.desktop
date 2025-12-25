@@ -1,9 +1,0 @@
-[Desktop Entry]
-Version=2.0
-Type=Application
-Name=NamaCut
-Comment=Video Cutter and Editor
-Exec=namacut
-Icon=vidcutter
-Terminal=false
-Categories=AudioVideo;Video;AudioVideoEditing;

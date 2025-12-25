@@ -1,0 +1,64 @@
+# ============================================
+# NamaCut - Video Cutter and Editor
+# Python Requirements
+# ============================================
+
+# --------------------------------------------------
+# Core Dependencies
+# --------------------------------------------------
+PyQt5>=5.15.0
+qtawesome>=1.3.0
+opencv-python>=4.5.0
+
+# --------------------------------------------------
+# Video Processing Dependencies
+# --------------------------------------------------
+# Note: FFmpeg and FFprobe must be installed separately
+# Ubuntu/Debian: sudo apt install ffmpeg
+# Fedora: sudo dnf install ffmpeg
+# Arch: sudo pacman -S ffmpeg
+# macOS: brew install ffmpeg
+# Windows: Download from ffmpeg.org
+
+# --------------------------------------------------
+# Development Dependencies (Optional)
+# --------------------------------------------------
+# For development and testing
+pytest>=7.0.0
+black>=22.0.0
+flake8>=5.0.0
+mypy>=0.990
+
+# --------------------------------------------------
+# Platform Specific Notes
+# --------------------------------------------------
+# Linux: May require additional Qt dependencies:
+#   sudo apt install libqt5multimedia5-plugins
+#   sudo apt install libqt5multimediawidgets5
+
+# Windows: PyQt5 may require Visual C++ Redistributable
+
+# macOS: May require:
+#   brew install qt5
+#   export PYTHONPATH=/usr/local/opt/qt5/lib/python3.9/site-packages:$PYTHONPATH
+
+# ============================================
+# Installation Instructions
+# ============================================
+
+# Basic installation:
+# pip install -r requirements.txt
+
+# For development:
+# pip install -r requirements.txt
+# pip install pytest black flake8 mypy
+
+# Verify FFmpeg installation:
+# ffmpeg -version
+# ffprobe -version
+
+# ============================================
+# Version Compatibility
+# ============================================
+# Python 3.8 or higher is required
+# Tested with Python 3.8, 3.9, 3.10, 3.11
