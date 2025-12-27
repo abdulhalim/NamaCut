@@ -420,9 +420,9 @@ class AdvancedSettingsDialog(QDialog):
             resolution = self.resolution_combo.currentText()
             if "Original" in resolution:
                 base_size_per_minute *= 1
-            elif "4K" in resolution:
+            elif "Ultra HD" in resolution or "4K" in resolution:
                 base_size_per_minute *= 4
-            elif "2K" in resolution:
+            elif "QHD" in resolution or "2K" in resolution:
                 base_size_per_minute *= 2.25
             elif "1080p" in resolution:
                 base_size_per_minute *= 1
@@ -514,19 +514,29 @@ class AdvancedSettingsDialog(QDialog):
         self.quality_slider.setValue(slider_value)
         self.on_quality_slider_changed()
         
-        # Load resolution
+        # Load resolution - FIXED: Add proper handling for 4K/2K
         resolution = self.settings.get("resolution", "Original")
-        resolutions = ["Original", "4K (3840x2160)", "2K (2560x1440)", 
-                      "1080p (1920x1080)", "720p (1280x720)", "480p (854x480)"]
         
-        if "Original" in resolution:
-            self.resolution_combo.setCurrentIndex(0)
+        # Map saved resolution names to combo box items
+        resolution_map = {
+            "Original": "Original",
+            "4K": "Ultra HD (3840x2160)",
+            "2K": "QHD (2560x1440)",
+            "1080p": "Full HD 1080p (1920x1080)",
+            "720p": "HD 720p (1280x720)",
+            "480p": "SD 480p (854x480)"
+        }
+        
+        # Get the corresponding display text
+        display_text = resolution_map.get(resolution, "Original")
+        
+        # Find and set the combo box item
+        index = self.resolution_combo.findText(display_text)
+        if index >= 0:
+            self.resolution_combo.setCurrentIndex(index)
         else:
-            for i, res in enumerate(resolutions):
-                if resolution in res and i > 0:
-                    self.resolution_combo.setCurrentIndex(i)
-                    break
-                
+            self.resolution_combo.setCurrentIndex(0)  # Default to Original
+        
         # Load video audio format
         video_audio_format = self.settings.get("video_audio_format", "Original")
         if video_audio_format == "MP3":
@@ -614,15 +624,17 @@ class AdvancedSettingsDialog(QDialog):
                 settings["crf_value"] = 29 - slider_value
                 settings["quality_slider"] = slider_value
                 
-                # Resolution settings
+                # Resolution settings - FIXED: Properly map display text to resolution names
                 resolution_text = self.resolution_combo.currentText()
+                
+                # Map display text to resolution names
                 if "Original" in resolution_text:
                     settings["resolution"] = "Original"
                     settings["quality"] = "Original"
-                elif "4K" in resolution_text:
+                elif "Ultra HD" in resolution_text or "4K" in resolution_text:
                     settings["resolution"] = "4K"
                     settings["quality"] = "4K"
-                elif "2K" in resolution_text:
+                elif "QHD" in resolution_text or "2K" in resolution_text:
                     settings["resolution"] = "2K"
                     settings["quality"] = "2K"
                 elif "1080p" in resolution_text:
