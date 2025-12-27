@@ -2,6 +2,8 @@
 # Video processing and export management
 # --------------------------------------------------
 import os
+import subprocess
+import json
 from PyQt5.QtCore import QObject, pyqtSignal, QProcess
 from .utils import parse_ffmpeg_progress
 
@@ -125,21 +127,40 @@ class VideoProcessor(QObject):
                 cmd.remove("copy")
                 cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-crf", "18"])
         else:
+            # Build filter chain
+            filter_chain = []
+            
+            # Add transformation filters (crop, rotate, flip)
             if video_filters:
-                cmd.extend(["-vf", video_filters])
-                
+                filter_chain.append(video_filters)
+            
+            # Add scale filter for resolution change
+            resolution_params = self._get_resolution_params(settings, input_path)
+            if resolution_params:
+                # Extract just the filter part (remove "-vf" prefix)
+                scale_filter = resolution_params[1] if len(resolution_params) > 1 else ""
+                if scale_filter:
+                    filter_chain.append(scale_filter)
+            
+            # Combine all filters
+            if filter_chain:
+                combined_filters = ",".join(filter_chain)
+                cmd.extend(["-vf", combined_filters])
+            
+            # Add codec parameters
             codec_params = self._get_video_codec_params(settings, format_index)
             if codec_params:
                 cmd.extend(codec_params)
-                
+            
+            # Add audio parameters
             audio_params = self._get_audio_params(settings, format_index)
-            cmd.extend(audio_params)
+            if audio_params:
+                cmd.extend(audio_params)
             
-            resolution_params = self._get_resolution_params(settings, input_path)
-            cmd.extend(resolution_params)
-            
+            # Add standard audio settings
             audio_settings = self._get_audio_settings(settings)
-            cmd.extend(audio_settings)
+            if audio_settings:
+                cmd.extend(audio_settings)
         
         if output_path.endswith('.mp4'):
             cmd.extend(["-movflags", "+faststart"])
@@ -147,8 +168,9 @@ class VideoProcessor(QObject):
         cmd.append(output_path)
         
         # Debug output
-        print(f"\n=== FFMPEG COMMAND WITH FILTERS ===")
+        print(f"\n=== FFMPEG COMMAND ===")
         print(f"Video filters: {video_filters}")
+        print(f"Resolution params: {resolution_params if 'resolution_params' in locals() else 'None'}")
         print(f"Full command: {' '.join(cmd)}")
         print(f"===================================\n")
         
@@ -233,19 +255,16 @@ class VideoProcessor(QObject):
         if resolution == "Original":
             return []
         
+        # Get original video dimensions
         try:
-            import subprocess
-            import json
-            
-            # Get original video dimensions
-            probe_cmd = [
+            cmd = [
                 "ffprobe", "-v", "error",
                 "-select_streams", "v:0",
                 "-show_entries", "stream=width,height",
                 "-of", "json", input_path
             ]
             
-            result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=5)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
             data = json.loads(result.stdout)
             
             if "streams" in data and len(data["streams"]) > 0:
@@ -254,45 +273,56 @@ class VideoProcessor(QObject):
                 
                 if orig_width == 0 or orig_height == 0:
                     return []
-                
-                orig_aspect = orig_width / orig_height
-                
-                # Target resolutions
-                if resolution == "4K":
-                    target_width, target_height = 3840, 2160
-                elif resolution == "2K":
-                    target_width, target_height = 2560, 1440
-                elif resolution == "1080p":
-                    target_width, target_height = 1920, 1080
-                elif resolution == "720p":
-                    target_width, target_height = 1280, 720
-                elif resolution == "480p":
-                    target_width, target_height = 854, 480
-                else:
-                    return []
-                
-                target_aspect = target_width / target_height
-                
-                if abs(orig_aspect - target_aspect) < 0.01:
-                    # Same aspect ratio, simple scale
-                    return ["-vf", f"scale={target_width}:{target_height}"]
-                else:
-                    # Different aspect ratio, add padding
-                    if orig_aspect > target_aspect:
-                        new_width = target_width
-                        new_height = int(target_width / orig_aspect)
-                    else:
-                        new_height = target_height
-                        new_width = int(target_height * orig_aspect)
-                    
-                    pad_x = (target_width - new_width) // 2
-                    pad_y = (target_height - new_height) // 2
-                    
-                    return ["-vf", f"scale={new_width}:{new_height},pad={target_width}:{target_height}:{pad_x}:{pad_y}:black"]
         except Exception as e:
-            print(f"Error calculating resolution scaling: {e}")
+            print(f"Error getting video dimensions: {e}")
+            return []
         
-        return []
+        # Calculate target dimensions while preserving aspect ratio
+        if resolution == "4K":
+            target_width, target_height = 3840, 2160
+        elif resolution == "2K":
+            target_width, target_height = 2560, 1440
+        elif resolution == "1080p":
+            target_width, target_height = 1920, 1080
+        elif resolution == "720p":
+            target_width, target_height = 1280, 720
+        elif resolution == "480p":
+            target_width, target_height = 854, 480
+        else:
+            return []
+        
+        # Ensure dimensions are even numbers (required by most codecs)
+        target_width = target_width if target_width % 2 == 0 else target_width - 1
+        target_height = target_height if target_height % 2 == 0 else target_height - 1
+        
+        # Calculate new dimensions that fit within target while preserving aspect ratio
+        orig_ratio = orig_width / orig_height
+        target_ratio = target_width / target_height
+        
+        if abs(orig_ratio - target_ratio) < 0.01:
+            # Same aspect ratio, direct scale
+            new_width = target_width
+            new_height = target_height
+        else:
+            # Different aspect ratio - fit within target dimensions
+            if orig_ratio > target_ratio:
+                # Video is wider than target, fit by width
+                new_width = target_width
+                new_height = int(target_width / orig_ratio)
+            else:
+                # Video is taller than target, fit by height
+                new_height = target_height
+                new_width = int(target_height * orig_ratio)
+        
+        # Ensure dimensions are even numbers
+        new_width = new_width if new_width % 2 == 0 else new_width - 1
+        new_height = new_height if new_height % 2 == 0 else new_height - 1
+        
+        # Ensure minimum dimensions
+        if new_width < 2 or new_height < 2:
+            return []
+        
+        return ["-vf", f"scale={new_width}:{new_height}"]
         
     def _get_audio_settings(self, settings):
         """Get standard audio settings"""
@@ -304,9 +334,6 @@ class VideoProcessor(QObject):
             return None
         
         try:
-            import subprocess
-            import json
-            
             cmd = [
                 "ffprobe", "-v", "error", 
                 "-select_streams", "v:0",
@@ -485,9 +512,6 @@ class VideoProcessor(QObject):
     def is_vc1_video(self, input_path):
         """Check if video uses VC-1 codec family"""
         try:
-            import subprocess
-            import json
-            
             cmd = [
                 "ffprobe", "-v", "error", 
                 "-select_streams", "v:0",
@@ -541,23 +565,26 @@ class VideoProcessor(QObject):
         else:
             cmd.extend(["-c:a", "aac", "-b:a", f"{audio_bitrate}k"])
         
-        # Apply video filters if any
-        if video_filters:
-            cmd.extend(["-vf", video_filters])
+        # Build filter chain
+        filter_chain = []
         
-        # Apply resolution scaling if requested
+        # Add transformation filters
+        if video_filters:
+            filter_chain.append(video_filters)
+        
+        # Add scale filter for resolution change
         resolution = settings.get("resolution", "Original")
         if resolution != "Original":
             res_params = self._get_resolution_params(settings, input_path)
             if res_params:
-                if video_filters:
-                    # Combine existing filters with scale filter
-                    current_filters = video_filters.split(',')
-                    scale_filter = res_params[1]
-                    new_filters = ','.join(current_filters + [scale_filter])
-                    cmd[-1] = new_filters
-                else:
-                    cmd.extend(res_params)
+                scale_filter = res_params[1] if len(res_params) > 1 else ""
+                if scale_filter:
+                    filter_chain.append(scale_filter)
+        
+        # Combine all filters
+        if filter_chain:
+            combined_filters = ",".join(filter_chain)
+            cmd.extend(["-vf", combined_filters])
         
         # Add faststart for MP4 files
         if output_path.endswith('.mp4'):
